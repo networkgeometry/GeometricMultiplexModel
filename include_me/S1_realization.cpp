@@ -27,9 +27,6 @@ using namespace std;
 //                                                              //
 //////////////////////////////////////////////////////////////////
 
-
-
-
 /*
 
 Outputting an edge file
@@ -44,40 +41,6 @@ void network::output_edgefile(string name){
     outfile.close();
 }
 
-//////////////////////////////////////////////////////////////////
-//                                                              //
-//                                                              //
-//                  Network Analysis Functions                  //
-//                                                              //
-//                                                              //
-//////////////////////////////////////////////////////////////////
-
-/*
-
-Filling the master equation
-
-*/
-void network::fill_master(){
-    if (master.size()!=0){
-        return;
-    }
-
-	master.clear();
-	master.resize(2*edges.at(1).size());
-	pi.push_back(master.data());
-	pf.push_back(master.data()-1);
-	//initialize pointers
-	for (int i=1; i<degree.size(); i++){
-		pi.push_back(pi.back()+degree.at(i-1));
-		pf.push_back(pi.at(i)-1);
-	}
-	for (int i=0; i<edges.at(0).size();i++){
-		pf.at(edges.at(0).at(i)-1)=pf.at(edges.at(0).at(i)-1)+1;
-		*pf.at(edges.at(0).at(i)-1)=edges.at(1).at(i);
-		pf.at(edges.at(1).at(i)-1)=pf.at(edges.at(1).at(i)-1)+1;
-		*pf.at(edges.at(1).at(i)-1)=edges.at(0).at(i);
-	}
-}
 
 //////////////////////////////////////////////////////////////////
 //                                                              //
@@ -107,22 +70,26 @@ S1_realization::S1_realization(double gamma, double beta, int kavg, int N, int s
     this->N=N;
     this->seed=seed;
 
-    //
+    //Generate angular coordinates
     Fill_thetas();
 
-    if (gamma>2){
-        Fill_kappas();
+    //Generate hidden degrees
+    if (gamma>2){ 
+        Fill_kappas(); //If gamma > 2, use the Pareto distribution to fill kappas
     }
     else{
         for (int i=0; i<N; i++){
-            kappas.push_back(kavg);
+            kappas.push_back(kavg); //If gamma <= 2, use the average degree kavg to fill kappas
         }
     }
 
-    //Calculate mu (here defined as the
-    //Calc_mu();
+    //Calculate mu - using numerical solver to find exact value for this system size
     calculate_numerical_mu();
 
+    //Calculate mu - using analytical formula that holds for N -> infinity
+    //Calc_mu();
+
+    //Connect the nodes
     Random_Connect();
 
 }
@@ -144,9 +111,11 @@ S1_realization::S1_realization(S1_realization layer1, double gamma2, double beta
     uniform_real_distribution<> uni{0,1};
     double a, fnu, phi1, phi2, kappa2;
 
+    // Generate the hidden degrees
     if (gamma2>2){
         kappa_0=(1-pow(N,-1))/(1-pow(N,(2-gamma)/(gamma-1)))*(gamma-2)/(gamma-1)*kavg;
         kappa_c=kappa_0*pow(N,1/(gamma-1));
+        // If gamma > 2 and 0 < nu < 1, use conditional cumulative distribution function (Eq. 14 in SI of Kleineberg2016, adapted to include cut-off kappa_c)
         if (nu > 0 && nu < 1){
             for (int i=0; i<N; i++){
                 phi1 =  std::log(1-std::pow(layer1.kappa_0/layer1.kappa_c,layer1.gamma-1));
@@ -159,9 +128,11 @@ S1_realization::S1_realization(S1_realization layer1, double gamma2, double beta
                 kappas.push_back(std::pow(1-(1-std::pow(kappa_0/kappa_c,gamma-1))*std::exp(-phi2),1.0/(1-gamma))*kappa_0);
             }
         }
+        // If gamma > 2 and nu = 0 (no correlations) generate random kappas from Pareto distribution
         else if (nu == 0){
             Fill_kappas();
         }
+        // If gamma > 2 and nu = 1 (full correlations) generate kappas using Eq.16 in SI of Kleineberg2016 adpated to include cut-off
         else if (nu == 1){
             for (int i=0; i<N; i++){
                 kappa2 = 1-std::pow(layer1.kappas.at(i)/layer1.kappa_0,1-layer1.gamma);
@@ -175,14 +146,16 @@ S1_realization::S1_realization(S1_realization layer1, double gamma2, double beta
             }
         }
     }
+    // If gamma <= 2 use the average degree kavg2 to fill kappas
     else{
         for (int i=0; i<N; i++){
             kappas.push_back(kavg2);
         }
     }
 
+    // Generate the angular coordinates
     double Phia,Phib,sigma,l,theta_new;
-
+    // If 0 < g < 1, generate thetas using Eq. 24 in SI of Kleineberg2016 
     if (g > 0 && g < 1){
         sigma = std::min(100.,N/(4*M_PI))*(1/g - 1);
         Phib = boost::math::erf(N / (2 * sigma));
@@ -197,9 +170,11 @@ S1_realization::S1_realization(S1_realization layer1, double gamma2, double beta
             thetas.push_back(theta_new);
         }
     }
+    // No correlations, generate random thetas
     else if (g == 0){
         Fill_thetas();
     }
+    // Full correlations, copy thetas from layer1
     else if (g == 1){
         for (int i = 0; i < N; i++){
             thetas.push_back(layer1.thetas.at(i));
@@ -216,7 +191,7 @@ Functions needed to build a realization
 
 */
 
-//Calculating mu
+//Calculating mu - analytical formula
 void S1_realization::Calc_mu(){
     double avg_kappa(0);
     for (int i=0; i < N; i++){
@@ -237,22 +212,20 @@ void S1_realization::Calc_mu(){
     }
 }
 
-//Fill kappas
+//Fill kappas with pareto distribution
 void S1_realization::Fill_kappas(){
     mt19937 gen{static_cast<uint32_t>(seed)};
     uniform_real_distribution<> kappa_distrib{0,1};
 
-
     kappa_0=(1-pow(N,-1))/(1-pow(N,(2-gamma)/(gamma-1)))*(gamma-2)/(gamma-1)*kavg;
     kappa_c=kappa_0*pow(N,1/(gamma-1));
-    //kappa_0=(gamma-2)/(gamma-1)*kavg;
+
     for (int i=0; i<N; i++){
-        //kappas.push_back(kappa_0*pow(1-kappa_distrib(gen),1/(1-gamma)));
         kappas.push_back(kappa_0*pow(1-kappa_distrib(gen)*(1-pow((kappa_c/kappa_0),1-gamma)),1/(1-gamma)));
     } 
 }
 
-
+//Calculate the radius of the hyperbolic disk
 void S1_realization::Calc_RH2(){
     if (beta >= 1){
         RH2 = 2.0 * std::log(N / M_PI);
@@ -263,6 +236,7 @@ void S1_realization::Calc_RH2(){
     RH2 -= 2 * std::log(mu * kappa_0 * kappa_0);
 }
 
+//Calculate the radial coordinates on the hyperbolic disk
 void S1_realization::Calc_rs(){
     if (RH2 == 0) {Calc_RH2();}
     for (auto it = kappas.begin(); it != kappas.end(); ++it){
@@ -270,11 +244,11 @@ void S1_realization::Calc_rs(){
     }
 }
 
+//Calculate the numerical value of mu 
 void S1_realization::calculate_numerical_mu()
 {
 
-
-    //Newtons method to find the value of mu where in the model the expected degree is the average degree
+    
     std::vector<double>::iterator it1,it2;
 
     bool keep_going(true);
@@ -285,8 +259,9 @@ void S1_realization::calculate_numerical_mu()
     double kappa_prime, curly_c;
     double xi;
 
+    //If gamma > 2, include degree integrals (based on SI of vanderKolk2022)
     if (gamma > 2){
-        // Initialize mu by its value for N -> Infinity and calculate prefactors (note that in a the emax is missing cause we are calculating here <k> not <E>)
+        // Initialize mu by its value for N -> Infinity and calculate prefactors
         if (beta>=1){
             mu = std::max(beta * std::sin(M_PI/beta) / (2*M_PI*kavg),0.01);
             b = (2-gamma);
@@ -309,16 +284,13 @@ void S1_realization::calculate_numerical_mu()
             mu = 1.0 / (kavg * N);
             curly_c = (gamma-1) * std::pow(kappa_0, (gamma - 1)) * 1.0 / (1 - 1.0 / N);
         }
-
-        //cout << a << " " << b << " " << emax << " " << kappa_0 << endl;
+        
+        //Newtons method to find the value of mu where in the model the expected degree is the average degree
         int n(1000);
-        //double cnt0(0),cnt1(0),cnt2(0);
         while(keep_going && cnt < 100){
-            /*cnt0=0;
-            cnt1=0;
-            cnt2=0;*/
-            int1 = 0;
-            int2 = 0;
+
+            int1 = 0; // f(x) in Newton's methos
+            int2 = 0; // f'(x) in Newton's method
             if (beta > 0){
                 for (int i=0; i<n; i++){
                     eprime = (i-n)*1.0/n;
@@ -376,9 +348,7 @@ void S1_realization::calculate_numerical_mu()
                 int2 *= curly_c * curly_c * N;
                 int2 /= mu * mu;
             }
-            //cout << "The contribution of the third term is " << int1 - cnt2 << endl;
-            //cout << " --------------- " << endl;
-            //cout << "mu = " << mu << " int1 = " << int1  << " int2 = " << int2 << endl;
+
             //Checks if the goal has been reached, if so, exit the loop.
             if(std::abs(int1 - kavg) < 1e-5){
             keep_going = false;
@@ -426,12 +396,14 @@ void S1_realization::calculate_numerical_mu()
                 }
             }
         }
+        //If beta == 0, no need to use Newton's method.
         else{
             mu = 1.0 / (kavg * (N-kavg));
         }
     }
 }
 
+//Fill the vector of thetas
 void S1_realization::Fill_thetas(){
     int seed1 = seed + 1;
     mt19937 gen{static_cast<uint32_t>(seed1)};
@@ -440,9 +412,9 @@ void S1_realization::Fill_thetas(){
     for (int i=0; i<N; i++){
         thetas.push_back(theta_distrib(gen));
     }
-    //sort(thetas.begin(),thetas.end());
 }
 
+//Randomly connect the nodes in the network
 void S1_realization::Random_Connect(){
     int seed2 = seed + 2;
     mt19937 gen{static_cast<uint32_t>(seed2)};
@@ -454,13 +426,10 @@ void S1_realization::Random_Connect(){
     edges.resize(2);
     degree.resize(N);
 
+    // Loop through all pairs of nodes
     for (int i=1; i < N; i++){
-        /*if (i%10000==1){
-            cout << i*1./N << endl;
-        }*/
-
         for (int j=0; j < i; j++){
-
+            //pij depends on beta
             if (beta>1){
                 xij=N*(M_PI-abs(M_PI-abs(thetas.at(i)-thetas.at(j))))/(2*M_PI*mu*kappas.at(i)*kappas.at(j));
                 pij=1/(1+pow(xij,beta));
@@ -470,7 +439,6 @@ void S1_realization::Random_Connect(){
             }else{
                 pij=1/(1+1.0/(mu*kappas.at(i)*kappas.at(j)));
             }
-
 
             random=p_distrib(gen);
             if (random<pij){

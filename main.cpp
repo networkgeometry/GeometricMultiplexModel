@@ -17,12 +17,15 @@ using namespace std;
 
 #include <cmath>
 
+//Struct to hold command line parameters
 struct Params {
     int N = -1;
     std::string parameter_file;
     std::string correlation_file;
 };
 
+// Function to parse command line arguments
+// Supports both flag-based and positional arguments
 bool parse_args(int argc, char* argv[], Params &params) {
     // Flag-based parsing
     for (int i = 1; i < argc; ++i) {
@@ -51,6 +54,8 @@ bool parse_args(int argc, char* argv[], Params &params) {
     return true;
 }
 
+// Function to load parameters from a file
+// The file should contain lines with: gamma beta kavg seed
 void load_parameters(string filename, vector<double>& gammas, vector<double>& betas, vector<double>& kavgs, vector<int>& seeds)
 {
     ifstream infile(filename);
@@ -73,6 +78,8 @@ void load_parameters(string filename, vector<double>& gammas, vector<double>& be
     infile.close();
 }
 
+// Function to load correlations from a file
+// The file should contain lines with: nu g
 void load_correlations(string filename, vector<double>& nus, vector<double>& gs)
 {
     ifstream infile(filename);

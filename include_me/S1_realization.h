@@ -18,12 +18,7 @@ class network{
         int kavg;
         vector<vector<int>> edges;
         vector<int> degree;
-        vector<int> master;
-        vector<int*> pi,pf;
-        double r=0;
-
     public:
-        void fill_master();
         void output_edgefile(string name);      
 };
 
@@ -31,9 +26,6 @@ class S1_realization: public network{
     public:
         double beta;
         double gamma;
-        double c;
-        double alpha;
-        double d;
         double mu;
         double RH2 = 0;
         int seed = 1534124;
@@ -46,29 +38,10 @@ class S1_realization: public network{
     private:
         //for pareto distr.
         double kappa_c;
-        //for stable distr.
-        double xi;
-        double zeta;
-        double X;
-        double U;
-        double W;
-        //for truncated stable distr;
-        double Phi0;
-        double G;
-        double pa;
-        double qa;
-        double ka;
-        double u1;
-        double u2;
-        double g;
-        double w;
         //for connecting;
         long double pij;
         double xij;
         double random;
-        //for rewiring;
-        vector<double> avg_loglikelihoods={0};
-        int rejected_rewirings;
 
     public:
         S1_realization(double gamma, double beta, int kavg, int N, int seed);
