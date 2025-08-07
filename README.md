@@ -60,7 +60,7 @@ Running `GENMULTIPLEX` can be done with or without flags
 
 ### Output files
 
-The program outputs the multiplex using a set of files. For each layer `i`, a hidden coordinate file `layer<i>.coord` is generated which contains two columns. The first contains the angular coordinates and the second the hidden degrees. Additionally, for each layer `i` and edge file `layer<i>.edge` is created.
+The program outputs the multiplex using a set of files. For each layer `i`, a hidden coordinate file `layer<i>.coord` is generated which contains two columns. The first contains the angular coordinates and the second the hidden degrees. Additionally, for each layer `i` an edge file `layer<i>.edge` is created.
 
 ## Publications 
 
