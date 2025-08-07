@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This repository can be used to generate an instance of the _Geometric Multiplex  (GMM). This is an extention of the geometric $\mathbb{S}^1$-model with $L$ layers where the correlations at the level of the hidden coordinates between the layers can be tuned. The full model can be found in [Kleineberg2016](https://doi.org/10.1038/nphys3812). 
+This repository can be used to generate an instance of the _Geometric Multiplex Model_ (GMM). This is an extention of the geometric $\mathbb{S}^1$-model with $L$ layers where the correlations at the level of the hidden coordinates between the layers can be tuned. The full model can be found in [Kleineberg2016](https://doi.org/10.1038/nphys3812). 
 
 ## Installation
 
